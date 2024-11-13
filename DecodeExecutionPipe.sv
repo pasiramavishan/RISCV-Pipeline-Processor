@@ -1,6 +1,6 @@
 module DecodeExecutionPipe (
-    input logic clk, RegWrite, ALUSrc, MemWrite, Branch, MemRead, MemtoReg, rstn,
-    input logic [1:0] ALUOp, //BranchOp,
+    input logic clk, RegWrite, ALUSrc, MemWrite, Branch, MemRead, rstn, Jump, Jalr,
+    input logic [1:0] ALUOp, MemtoReg, BranchOp,
     input logic [31:0] PC, 
     input logic [31:0] Extended_imm,
     input logic [31:0] ReadData1, ReadData2,
@@ -9,14 +9,17 @@ module DecodeExecutionPipe (
     output logic [4:0] rs1_out, rs2_out, rd_out,
     output logic [31:0] instruction_out, Extended_imm_out,
     output logic [31:0] ReadData1_out, ReadData2_out,
-    output logic [31:0] PC_next,
-    output logic RegWrite_out, ALUSrc_out, MemWrite_out, Branch_out, MemRead_out, MemtoReg_out,
-    output logic [1:0] ALUOp_out //BranchOp_out
+    output logic [31:0] PC_next, PC_jump,
+    output logic RegWrite_out, ALUSrc_out, MemWrite_out, Branch_out, MemRead_out, Jump_out, Jalr_out,
+    output logic [1:0] ALUOp_out, MemtoReg_out //BranchOp_out
 
-);
+);  
+    logic flush;
+    
+    assign flush = (BranchOp == 2'b00 || BranchOp == 2'b10) ? 1'b1 : 1'b0;
 
     always_ff @(posedge clk or negedge rstn) begin
-        if(!rstn) begin
+        if(!rstn || flush) begin
             RegWrite_out <= 0;
             ALUSrc_out <= 0;
             MemWrite_out <= 0;
@@ -32,7 +35,10 @@ module DecodeExecutionPipe (
             rs2_out <= 0;
             rd_out <= 0;
             instruction_out <= 0;
-            Extended_imm_out <= 0;  
+            PC_jump <= 0;
+            Extended_imm_out <= 0; 
+            Jump_out <= 0;
+            Jalr_out <= 0;
         end else begin
             RegWrite_out <= RegWrite;
             ALUSrc_out <= ALUSrc;
@@ -43,13 +49,16 @@ module DecodeExecutionPipe (
             ALUOp_out <= ALUOp;
             // BranchOp <= BranchOp_out;
             PC_next <= PC;
+            PC_jump <= PC;
             ReadData1_out <= ReadData1;
             ReadData2_out <= ReadData2;
             rs1_out <= rs1;
             rs2_out <= rs2;
             rd_out <= rd;
             instruction_out <= instruction;
-            Extended_imm_out <= Extended_imm;       
+            Extended_imm_out <= Extended_imm;
+            Jump_out <= Jump;
+            Jalr_out <= Jalr;       
         end
     end
     

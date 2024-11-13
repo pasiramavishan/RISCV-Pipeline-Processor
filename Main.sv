@@ -3,24 +3,34 @@ module Main (
 ); //result
 
     logic [31:0] nextAddr, PC_In, PC_out, instruction, instruction_out, PC_Out_next_decode, imm_data, ReadData1, ReadData2, branchAddr_next,
-    instruction_out_func, Addr, branchAddr, ReadData1_out, ReadData2_out; // result;
-    logic [31:0] Extended_imm_out, ALU_A, ALU_B, result, ALU_B_prev, result_out, writeData, readData, writeData_reg, final_data, final_adress;
-    logic branchOp, MemRead_decode, MemtoReg_decode, MemWrite_decode, branch_decode, ALUSrc, RegWrite_mem, RegWrite_execute,
-    memRead, RegWrite_WB, RegWrite_decode, ALUSrc_decode, MemtoReg_mem, branch_next, finalSelect;
-    logic MemRead_execute, MemtoReg_execute, MemWrite_execute, Branch_execute, Zero, Negative, zero_next, negative_next, MemWrite_out; 
+    instruction_out_func, Addr, branchAddr, ReadData1_out, ReadData2_out, Jump_addr, Jump_addr_out, Jump_toMux; // result;
+    
+	logic [31:0] Extended_imm_out, ALU_A, ALU_B, result, ALU_B_prev, result_out, writeData, readData, writeData_reg, final_data, final_adress, write_dataForward;
+    
+	logic MemRead_decode, MemWrite_decode, branch_decode, ALUSrc, RegWrite_mem, RegWrite_execute, Jump_toBC, Jalr_toBC,
+    memRead, RegWrite_WB, RegWrite_decode, ALUSrc_decode, branch_next, Jump, Jalr, Jump_out, Jalr_out;
+    logic MemRead_execute, MemWrite_execute, Branch_execute, Zero, Negative, zero_next, negative_next, MemWrite_out; 
     logic [6:0] opcode, OpForward; //branchOp
     logic [4:0] RS1, RS2, RD, rd_out_mem, rd_out_write, rd_out;
     logic [3:0] ALUOp_decode, ALUControl;
     logic [1:0] forwardA, forwardB;
-    logic [1:0] ALUOp;
+    logic [1:0] ALUOp, branchOp, finalSelect, MemtoReg_execute, MemtoReg_decode, MemtoReg_mem;
     logic [2:0] branchFunct;
     logic [4:0] rs1_out, rs2_out;
     
-    Mux PC_Mux (
-        .inp1(branchAddr_next), 
-        .inp2(nextAddr),
-        .sel(branchOp),
-        .out(PC_In)
+    // Mux PC_Mux (
+    //     .inp1(branchAddr_next), 
+    //     .inp2(nextAddr),
+    //     .sel(branchOp),
+    //     .out(PC_In)
+    // );
+
+    ALU_mux PC_Mux(
+        .data1(branchAddr_next),
+        .data2(nextAddr),
+        .data3(result_out),
+        .control(branchOp),
+        .dataOut(PC_In)
     );
 
     PC PC_Module(
@@ -28,6 +38,7 @@ module Main (
         .rstn(rstn),
         .NextAddr(PC_In),
         .Addr(PC_out)
+        // .BranchOp(branchOp)
     );
 
     AdderPC PC_Adder(
@@ -47,7 +58,8 @@ module Main (
         .PC_Out(PC_out),
         .instruction(instruction),
         .PC_Out_next(PC_Out_next_decode),
-        .instruction_out(instruction_out)
+        .instruction_out(instruction_out),
+        .BranchOp(branchOp)
     );
 
     Instruction_Parser instructionDecoder(
@@ -76,9 +88,6 @@ module Main (
         .Extended_imm(imm_data)
     );
 
-
-
-
     ControlUnit control(
         .Op(opcode),
         .RegWrite(RegWrite_decode),
@@ -88,7 +97,9 @@ module Main (
         .MemRead(MemRead_decode), 
         .MemtoReg(MemtoReg_decode),
         .ALUOp(ALUOp_decode),
-        .OpForward(OpForward)
+        .OpForward(OpForward),
+        .Jump(Jump), 
+        .Jalr(Jalr)
     );
 
 
@@ -98,6 +109,8 @@ module Main (
         .RegWrite(RegWrite_decode), 
         .ALUSrc(ALUSrc_decode),
         .MemWrite(MemWrite_decode), 
+        .Jump(Jump),
+        .Jalr(Jalr),
         .Branch(branch_decode), 
         .MemRead(MemRead_decode), 
         .MemtoReg(MemtoReg_decode),
@@ -119,15 +132,18 @@ module Main (
         .ReadData1_out(ReadData1_out), 
         .ReadData2_out(ReadData2_out),
         .PC_next(Addr),
+        .PC_jump(Jump_addr),
         .RegWrite_out(RegWrite_execute), 
         .ALUSrc_out(ALUSrc), 
         .MemWrite_out(MemWrite_execute), 
         .Branch_out(Branch_execute), 
         .MemRead_out(MemRead_execute), 
         .MemtoReg_out(MemtoReg_execute),
-        .ALUOp_out(ALUOp)
+        .ALUOp_out(ALUOp),
+        .Jump_out(Jump_out),
+        .Jalr_out(Jalr_out),
+        .BranchOp(branchOp)
         //.BranchOp_out(branch_execute)
-
     );
 
     ALUcontrol aluControl(
@@ -159,7 +175,7 @@ module Main (
     ALU_mux mux_A(
         .data1(ReadData1_out), 
         .data2(writeData_reg), 
-        .data3(result_out),
+        .data3(write_dataForward),
         .control(forwardA),
         .dataOut(ALU_A)
     );
@@ -167,7 +183,7 @@ module Main (
     ALU_mux mux_B(
         .data1(ReadData2_out), 
         .data2(writeData_reg), 
-        .data3(result_out),
+        .data3(write_dataForward),
         .control(forwardB),
         .dataOut(ALU_B_prev)
     );
@@ -216,7 +232,14 @@ module Main (
         .writeData_out(writeData),
         .rd_out(rd_out_mem),
         .result_out(result_out),
-        .funct3_out(branchFunct)
+        .funct3_out(branchFunct),
+        .Jump_addr(Jump_addr),
+        .Jump_addr_out(Jump_addr_out),
+        .Jump(Jump_out), 
+        .Jump_out(Jump_toBC), 
+        .Jalr(Jalr_out), 
+        .Jalr_out(Jalr_toBC),
+        .BranchOp(branchOp)
     );
 
     BranchControl isBranch(
@@ -224,7 +247,9 @@ module Main (
         .Zero(zero_next), 
         .Negative(negative_next),
         .BranchOp(branchOp),
-        .funct3(branchFunct)
+        .funct3(branchFunct),
+        .Jump(Jump_toBC), 
+        .Jalr(Jalr_toBC)
     );
 
     DataMem dataMemory(
@@ -237,7 +262,12 @@ module Main (
         .ReadData(readData)
     ); 
 
-
+   Mux forwardingMux (
+        .inp1(readData), 
+		.inp2(result_out),
+        .sel(MemtoReg_mem),
+        .out(write_dataForward)
+    );
 
     memoryWriteBackPipe Pipe4 (
         .readData(readData), 
@@ -252,13 +282,22 @@ module Main (
         .RegWrite_out(RegWrite_WB),
         .MemtoReg_out(finalSelect),
         .clk(clk)
+        //.Jump_addr(Jump_addr_out),
+        //.Jump_addr_out(Jump_toMux)
     );
 
-    Mux MemRegMux (
-        .inp1(final_data), 
-        .inp2(final_adress),
-        .sel(finalSelect),
-        .out(writeData_reg)
-    );
+    // Mux MemRegMux (
+    //     .inp1(final_data), 
+    //     .inp2(final_adress),
+    //     .sel(finalSelect),
+    //     .out(writeData_reg)
+    // );
    
+    ALU_mux MemRegMuxr(
+        .data1(final_data),
+        .data2(final_adress),
+        .data3(Jump_addr_out),
+        .control(finalSelect),
+        .dataOut(writeData_reg)
+    );
 endmodule
