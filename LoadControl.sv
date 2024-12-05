@@ -1,7 +1,7 @@
 module Loadcontrol(
     input logic MemRead,
     input logic [2:0]funct3,
-    input logic [6:0]funct7,
+    // input logic [6:0]funct7,
     input logic [31:0] InputData, 
     output logic [31:0] WriteData
 );
@@ -18,7 +18,7 @@ module Loadcontrol(
     assign WriteData = ((MemRead == 1'b1) & (funct3 == 3'b000)) ? InputData[7:0] :   /// Not sure
                         ((MemRead == 1'b1) & (funct3 == 3'b001)) ? InputData[15:0] :
                         ((MemRead == 1'b1) & (funct3 == 3'b010)) ? InputData[31:0] :
-                        ((MemRead == 1'b1) & (funct3 == 3'b100)) ? 32'b0 + InputData[7:0]:
-                        ((MemRead == 1'b1) & (funct3 == 3'b101)) ? 32'b0 + InputData[15:0] :
+                        ((MemRead == 1'b1) & (funct3 == 3'b100)) ? {{24{InputData[7]}}, InputData[7:0]}:
+                        ((MemRead == 1'b1) & (funct3 == 3'b101)) ? {{16{InputData[15]}}, InputData[15:0]} :
                         InputData; 
 endmodule

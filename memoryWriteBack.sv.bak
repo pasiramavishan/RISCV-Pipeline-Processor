@@ -15,7 +15,7 @@ module memoryWriteBackPipe (
             readData_out <= 0; 
             memAddress_out <= 0;
             rd_out <= 0;
-            RegWrite_out <= 1; 
+            RegWrite_out <= 0; 
             MemtoReg_out <= 0;   
             //Jump_addr_out <= 0;
         end else begin

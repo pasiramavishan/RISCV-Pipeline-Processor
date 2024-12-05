@@ -14,7 +14,7 @@
 
 
 module PC(
-    input logic clk, rstn, stall,
+    input logic clk, rstn,
     input logic [31:0] NextAddr,
     output logic [31:0] Addr,
     output logic [31:0] JumpAddr
@@ -24,9 +24,7 @@ module PC(
         if(!rstn)
             Addr <= {32{1'b0}};
         else
-				if (!stall) begin
-					Addr <= NextAddr; 
-					JumpAddr <= NextAddr + 4;   
-				end
+            Addr <= NextAddr; 
+            JumpAddr <= NextAddr + 4;       
     end
 endmodule
