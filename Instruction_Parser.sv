@@ -1,7 +1,7 @@
 module Instruction_Parser(
     input logic [31:0] instruction,
     output logic [6:0] opcode,
-    output logic [6:0] rs1, rs2, rd
+    output logic [4:0] rs1, rs2, rd
 );
 
     assign opcode = instruction[6:0];

@@ -1,4 +1,4 @@
-module ALU_mux (
+/* module ALU_mux (
   input logic [31:0] data1, data2, data3,
   input logic [1:0] control,
   output logic [31:0] dataOut
@@ -19,4 +19,14 @@ always_comb begin
       
     endcase 
 end    
+endmodule */
+
+module ALU_mux (
+    input logic [31:0] data1, data2, data3,
+    input logic [1:0] control,
+    output logic [31:0] dataOut
+);
+
+assign dataOut = (control[1]) ? data3 : (control[0]) ? data2 : data1;
+
 endmodule
