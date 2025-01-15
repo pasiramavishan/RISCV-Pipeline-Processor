@@ -344,7 +344,7 @@ module Main (
     // );
 
 
-    DataMem dataMemory(
+    /* DataMem dataMemory(
         .clk(clk), 
         .rstn(rstn), 
         .WriteEn(MemWrite_out), 
@@ -353,8 +353,39 @@ module Main (
         .Addr(result_out), 
         .WriteData(writeData),
         .ReadData(readData_Med)
-    );
-
+    ); */
+	 
+	 // Instantiate the set_ass_cache module
+    set_ass_cache #(
+        .DATA_WIDTH(32),      // Default value
+        .ADDR_WIDTH(32),      // Default value
+        .TAG_WIDTH(28),       // Default value
+        .WAY_COUNT(4),        // Default value
+        .SET_COUNT(4),        // Default value
+        .LINE_SIZE(4)         // Default value
+    ) cache_inst (
+        .clk(clk),
+        .rstn(rstn),
+        .ReadEn(memRead),
+        .WriteEn(MemWrite_out),
+        .Addr(result_out),
+        .funct3(branchFunct),
+        .WriteData(writeData),
+        .ReadData(readData_Med),
+        .cacheReady(cacheReady)
+		);
+		
+	/*  DataMem data_memory_inst (
+        .clk(clk),
+        .rstn(rstn),
+        .WriteEn(WriteEn),
+        .ReadEn(ReadEn),
+        .funct3(funct3),
+        .Addr(Addr),
+        .WriteData(WriteData),
+        .ReadData(ReadData)
+    ); */
+		
     Loadcontrol loadcontrol(
         .MemRead(memRead),
         .funct3(branchFunct),
